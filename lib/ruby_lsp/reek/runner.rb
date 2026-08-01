@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "reek"
+require_relative "diagnostic"
 
 module RubyLsp
   module Reek
@@ -12,68 +13,40 @@ module RubyLsp
         @config = ::Reek::Configuration::AppConfiguration.from_default_path
       end
 
-      # We are not implementing this method, but it is required by the interface
+      # We are not implementing this method, but it is required by the
+      # interface. Reek is a linter, so there is nothing to format and the
+      # source is handed back untouched.
       #
-      # @param uri [String] The URI of the document to format.
-      # @param document [RubyLsp::Interface::TextDocumentItem] The document to format.
+      # :reek:UtilityFunction { enabled: false } - the interface requires an
+      # instance method, so it cannot depend on instance state.
+      #
+      # @param uri [URI::Generic] The URI of the document to format.
+      # @param document [RubyLsp::RubyDocument] The document to format.
       # @return [String] The formatted document.
       def run_formatting(_uri, document)
         document.source
       end
 
-      # @param uri [String] The URI of the document to run diagnostics on.
-      # @param document [RubyLsp::Interface::TextDocumentItem] The document to run diagnostics on.
+      # @param uri [URI::Generic] The URI of the document to run diagnostics on.
+      # @param document [RubyLsp::RubyDocument] The document to run diagnostics on.
       def run_diagnostic(uri, document)
         path = Pathname.new(uri.path)
         return [] if path_excluded?(path)
 
-        examiner = build_examiner(path, document)
-        examiner.smells.map { |smell| warning_to_diagnostic(smell) }
+        # We lint the source as it currently stands in the editor, but Reek
+        # resolves directory directives from the origin, so the origin has to
+        # be set explicitly to the file on disk rather than defaulting to
+        # "string".
+        examiner = ::Reek::Examiner.new(
+          ::Reek::Source::SourceCode.from(document.source, origin: path.to_s),
+          configuration: config
+        )
+        examiner.smells.map { |smell| Diagnostic.from_warning(smell) }
       end
 
       private
 
       attr_reader :config
-
-      # Examiner does not allow separate source and origin, but we need to
-      # lint the string from the editor AND know what the filename of the
-      # edited file is. This patches the examiner to allow this.
-      def build_examiner(path, document)
-        examiner = ::Reek::Examiner.new(document.source, configuration: config)
-        origin = ::Reek::Source::SourceCode.from(path).origin
-        examiner.instance_variable_set(:@origin, origin)
-        examiner.instance_variable_set(
-          :@detector_repository,
-          ::Reek::DetectorRepository.new(
-            smell_types: examiner.instance_variable_get(:@smell_types),
-            configuration: config.directive_for(origin)
-          )
-        )
-        examiner
-      end
-
-      # @param warning [Reek::SmellWarning] The warning to convert to a diagnostic.
-      # @return [RubyLsp::Interface::Diagnostic] The diagnostic.
-      def warning_to_diagnostic(warning)
-        lines = warning.lines
-        ::RubyLsp::Interface::Diagnostic.new(
-          range: ::RubyLsp::Interface::Range.new(
-            start: ::RubyLsp::Interface::Position.new(
-              line: lines.first - 1,
-              character: 0
-            ),
-            end: ::RubyLsp::Interface::Position.new(
-              line: lines.last - 1,
-              character: 0
-            )
-          ),
-          severity: Constant::DiagnosticSeverity::WARNING,
-          code: warning.smell_type,
-          code_description: ::RubyLsp::Interface::CodeDescription.new(href: warning.explanatory_link),
-          source: "Reek",
-          message: warning.message
-        )
-      end
 
       def path_excluded?(path)
         path.ascend do |ascendant|
