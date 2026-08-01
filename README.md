@@ -29,7 +29,7 @@ Add `reek` to the list of linters in your Ruby LSP configuration.
 In `settings.json`:
 
 ```json
-"rubyLsp.linters": [ "reek" ]
+"rubyLsp.linters": [ "rubocop", "reek" ]
 ```
 
 After that, open the VS code command palette and select the option `Developer: Reload Window`.
@@ -45,18 +45,13 @@ Update your nvim-lspconfig as follows:
       servers = {
         ruby_lsp = {
           init_options = {
-            linters = { "reek" },
+            linters = { "rubocop", "reek" },
           },
         },
       },
     },
   },
 ```
-
-The list can hold several linters, e.g. `[ "rubocop", "reek" ]`. Note that as of
-RuboCop 1.70 the `rubocop` identifier activates the add-on shipped in the rubocop
-gem itself; Ruby LSP logs a warning pointing you at `rubocop_internal` if you
-want its own integration instead.
 
 See the [Ruby LSP Editor docs](https://shopify.github.io/ruby-lsp/editors.html)
 for more information on how to configure other editors.
