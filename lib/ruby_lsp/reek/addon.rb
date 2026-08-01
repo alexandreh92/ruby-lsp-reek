@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "bundler/setup"
-require "sorbet-runtime"
 require "ruby_lsp/addon"
 require "ruby_lsp/base_server"
 require "ruby_lsp/server"
@@ -20,6 +19,11 @@ module RubyLsp
       # @return [String] The name of the addon.
       def name
         "Reek: Code smell detector for Ruby"
+      end
+
+      # @return [String] The version of the addon.
+      def version
+        ::RubyLsp::Reek::VERSION
       end
 
       # @param global_state [GlobalState] The global state of the Ruby LSP server.
