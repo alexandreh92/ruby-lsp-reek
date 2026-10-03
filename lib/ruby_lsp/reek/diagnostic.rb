@@ -7,17 +7,22 @@ module RubyLsp
     module Diagnostic
       # @param warning [Reek::SmellWarning] The warning to convert to a diagnostic.
       # @return [RubyLsp::Interface::Diagnostic] The diagnostic.
-      def self.from_warning(warning)
-        lines = warning.lines
+      def self.from_warning(warning, source)
+        line = warning.lines.first - 1
+        line_source = source.lines[line]&.chomp || ""
+
+        start_character = line_source.index(/\S/) || 0
+        end_character = line_source.rstrip.length
+
         ::RubyLsp::Interface::Diagnostic.new(
           range: ::RubyLsp::Interface::Range.new(
             start: ::RubyLsp::Interface::Position.new(
-              line: lines.first - 1,
-              character: 0
+              line: line,
+              character: start_character
             ),
             end: ::RubyLsp::Interface::Position.new(
-              line: lines.last - 1,
-              character: 0
+              line: line,
+              character: end_character
             )
           ),
           severity: Constant::DiagnosticSeverity::WARNING,

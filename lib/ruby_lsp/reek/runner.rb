@@ -41,7 +41,7 @@ module RubyLsp
           ::Reek::Source::SourceCode.from(document.source, origin: path.to_s),
           configuration: config
         )
-        examiner.smells.map { |smell| Diagnostic.from_warning(smell) }
+        examiner.smells.map { |smell| Diagnostic.from_warning(smell, document.source) }
       end
 
       private
